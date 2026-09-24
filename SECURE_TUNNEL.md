@@ -48,6 +48,8 @@ tunnel-client runtimes status wccwinpc --json
 
 ## 接入快速聊天并验收
 
-先在 ChatGPT **设置 → 账户安全与登录 → 开发人员模式**开启开发者模式；这会允许添加未经验证的连接器，应只为自己信任的只读服务开启。然后打开 [Plugins](https://chatgpt.com/plugins)，添加 MCP 连接，**Connection 选择 Tunnel**，选取或填写自己的 `tunnel_id`。必须在本机 tunnel-client 正常运行时创建连接，确认工具发现包含 `stat_path`、`read_file` 等只读工具且没有 `write_file`、`create_directory`。新建 GPT 快速聊天，启用该连接，只让它调用 `stat_path({"path":"."})`。看到真实工具调用并返回 `directory` 才算成功。[官方 ChatGPT 接入步骤](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
+先在 ChatGPT **设置 → 账户安全与登录 → 开发人员模式**开启开发者模式；这会允许添加未经验证的连接器，应只为自己信任的只读服务开启。然后打开 [Plugins](https://chatgpt.com/plugins)，依次选择 **添加插件 → 创建应用 → 创建 MCP 应用**，填写名称，连接选 **隧道**，再选自己的 Tunnel。对于本仓库的 stdio 服务，ChatGPT 连接的身份验证选 **无身份验证**：运行客户端到 OpenAI 的通道已经使用专用 Runtime API Key 鉴权，不应再把该密钥填进插件表单。勾选对自建 MCP 的风险确认后创建。
+
+必须在本机 tunnel-client 正常运行时创建连接，确认工具发现包含 `stat_path`、`read_file` 等只读工具且没有 `write_file`、`create_directory`。新建 GPT 的“聊天”对话，在输入框的加号菜单选择刚创建的插件，只让它调用 `stat_path({"path":"."})`。展开回复里的工具调用列表，看到 **Stat path** 请求 `{path:"."}` 与目录类型的返回，且本机 `audit.jsonl` 记录 `stat_path` 成功，才算验收通过。[官方 ChatGPT 接入步骤](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
 
 这条链路只为该用户自己的账号或被关联的工作区提供私有访问。朋友若想让自己的快速聊天读自己的电脑，必须在朋友的机器上重复安装，使用朋友自己的授权目录、Platform Tunnel、运行密钥和 ChatGPT 连接。克隆仓库本身不会让任何人的文件自动公开。
