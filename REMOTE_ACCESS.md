@@ -8,6 +8,8 @@
 
 **长期 HTTPS 地址**：GPT 快速聊天 → `https://files.example.com/mcp` → HTTPS 网关 → 同机 `127.0.0.1:47381/mcp` → 授权目录。DNS 名称指向入口；仅修改客户端 `hosts` 文件或使用不可从 OpenAI 到达的私有 IP 无效。不同朋友各自部署服务，并注册各自的 HTTPS 地址。服务器可在局域网、家用电脑或云主机上，但入口必须可从 ChatGPT 到达，且不能把未经鉴权的 MCP 原始端口直接暴露出去。正式公开分发还需稳定 HTTPS 端点与插件审查。参见 [插件部署要求](https://developers.openai.com/plugins/build/mcp-server)。
 
+没有自有域名时，可向托管入口提供商申请固定 HTTPS 子域名。例如 [ngrok 官方说明](https://ngrok.com/use-cases/share-localhost)目前列出免费套餐的一条静态域名；每位用户仍须自行注册并管理该服务。它解决的是“稳定地址和公网可达”，**不解决 MCP 用户认证**。在 OAuth 2.1 身份提供商及网关策略配置、未认证访问拒绝测试完成前，不要把本项目的 `/mcp` 映射到该域名。Cloudflare Quick Tunnel 会产生随机地址，官方定位为开发测试，因此不适合作为长期插件地址。
+
 ChatGPT 不会提供用户自定义的静态 API key。公网网关应验证 OpenAI 管理的客户端 mTLS 证书，终端用户应走 OAuth 2.1；若用现有静态 Token 连接 MCP 进程，只能将其保存在网关私有配置里并由网关注入，不得放在插件清单或 URL 中。多用户共享服务器还须按身份隔离目录，本项目当前只实现单实例单根目录，因此推荐每人部署自己的实例。参见 [ChatGPT 认证指南](https://developers.openai.com/plugins/build/auth)。
 
 当网关与 MCP 进程位于同一机器时，保持 `listen: "127.0.0.1"`、`allow_remote: false`，并设置 `behind_proxy: true`。此模式下写工具还须 `allow_remote_write: true` 与相应 `write_permissions` 同时开启。网关必须完成 TLS、客户端和用户认证、请求体限制及速率限制，并且只能转发 `/mcp` 到本机端口。应用本身的 `/healthz` 不应公开。部署完成先检查未认证请求被拒绝，再从 ChatGPT 注册连接并检查发现的工具。
