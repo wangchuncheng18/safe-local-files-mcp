@@ -79,7 +79,7 @@ codex mcp get safe_local_files
 
 私有隧道的操作顺序：在 Platform 创建 `tunnel_id` 并关联目标 ChatGPT 工作区；在数据机器安装官方 `tunnel-client`；使其指向本机 `safe-local-files stdio --config <私有配置绝对路径>`；运行 `doctor` 确认连接；在 ChatGPT 开发者模式注册 Tunnel 类型 MCP 连接；确认它发现读取工具；新建 GPT 快速聊天，显式启用该连接，仅调用 `stat_path` 检查 `.`。运行密钥仅保存在数据机器私有位置，不能出现在仓库、插件清单、命令输出或对话中。隧道不自动赋予写权限。
 
-HTTPS 地址的操作顺序：为每台数据机器准备可从 ChatGPT 到达的域名和 HTTPS 网关；MCP 进程保持回环监听，设 `behind_proxy=true`；网关验证 ChatGPT 客户端 mTLS，终端用户使用受支持的 OAuth 2.1 身份提供商；将请求转发至同机 `/mcp`，静态后端 Token 只保存在网关私有配置。先验证未认证请求被拒绝、代理不可访问其他路径，再在 ChatGPT 开发者模式注册 HTTPS MCP 连接。**ChatGPT 不支持自定义静态 API key；不能把现有 Token 填进插件 URL 代替 OAuth。** 没有域名、网关和认证时，不要宣称 HTTPS 路线已可用。
+HTTPS 地址的推荐顺序见 [CLOUDFLARE.md](CLOUDFLARE.md)：为每台数据机器准备已接入 Cloudflare 的域名；MCP 进程保持回环监听，设 `behind_proxy=true` 和 `auth_mode=cloudflare_access`，配置团队域名与 Access AUD tag；先创建仅允许本人登录的 Access MCP 应用并开启 Managed OAuth，再发布 Named Tunnel 地址；将请求转发至同机 `/mcp`。先验证未认证请求被拒绝，再在 ChatGPT 开发者模式注册 HTTPS MCP 连接。**ChatGPT 不支持自定义静态 API key；不能把现有 Token 填进插件 URL 代替 OAuth。** 没有域名和 Access 配置时，不要宣称 HTTPS 路线已可用。
 
 ## 验收
 

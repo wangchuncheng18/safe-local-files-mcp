@@ -111,3 +111,24 @@ func TestWriteToolsAppearOnlyWhenEnabled(t *testing.T) {
 		<-serverDone
 	}
 }
+
+func TestCloudflareAccessModeDoesNotAcceptStaticToken(t *testing.T) {
+	cfg := config.Defaults()
+	cfg.Root = t.TempDir()
+	cfg.AuditLog = filepath.Join(t.TempDir(), "audit.jsonl")
+	cfg.AuthMode = "cloudflare_access"
+	cfg.CloudflareTeamDomain = "https://team.cloudflareaccess.com"
+	cfg.CloudflareAudience = "0123456789abcdef"
+	cfg.Token = "0123456789abcdefghijklmnopqrstuvwxyz-TEST"
+	service, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := httptest.NewRequest(http.MethodPost, "/mcp", nil)
+	request.Header.Set("Authorization", "Bearer "+cfg.Token)
+	recorder := httptest.NewRecorder()
+	service.Handler().ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("static token accepted in Cloudflare mode: %d", recorder.Code)
+	}
+}

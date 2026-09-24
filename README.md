@@ -67,6 +67,8 @@ cd safe-local-files-mcp
 | `root` | 示例目录 | 唯一授权目录；须改成自己机器上的路径 |
 | `port` | `47381` | 可选 HTTP 端口；不影响本机 `stdio` |
 | `token_env` | `SAFE_LOCAL_FILES_TOKEN` | HTTP Token 的环境变量名称 |
+| `auth_mode` | `bearer_token` | HTTP 鉴权模式；Cloudflare Access 可改为 `cloudflare_access` |
+| `cloudflare_team_domain` / `cloudflare_audience` | 空 | Cloudflare Access 模式的团队域名与应用 AUD tag |
 | `audit_log` | 用户私有目录 | JSONL 审计日志位置 |
 | `deny_globs` | 密钥、凭据等规则 | 拒绝读取和写入的路径 |
 | `allow_extensions` | 常见文本扩展名 | 可读取或写入的文件类型 |
@@ -103,7 +105,7 @@ HTTP 默认只监听 `127.0.0.1:47381`。可在私有 `config.json` 中改 `port
 | --- | --- |
 | 本机 Codex 任务 | `stdio`，无需网络端口 |
 | GPT 快速聊天访问私有机器 | [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)：在数据机器运行 `tunnel-client`，连接本机 `stdio` MCP 或私有 HTTP MCP |
-| GPT 快速聊天或其他云端客户端访问长期服务 | 稳定域名的公网 HTTPS 入口 → 受控网关/反向代理 → 同机 `127.0.0.1:47381/mcp`；面向 ChatGPT 的身份验证须符合其 MCP OAuth/mTLS 要求 |
+| GPT 快速聊天或其他云端客户端访问长期服务 | [Cloudflare Tunnel + Access](CLOUDFLARE.md)：稳定 HTTPS 域名 → Cloudflare Managed OAuth → 同机 `127.0.0.1:47381/mcp` |
 | 内网或 VPN 内的 Codex 客户端 | 使用 VPN 地址的 HTTPS MCP；客户端保存自己的凭据 |
 
 `127.0.0.1` 永远指当前发起连接的机器。内网 DNS、`hosts` 文件或 VPN IP 只对能进入该网络的客户端有效，不能让云端 GPT 快速聊天直接访问本机。完整链路、部署边界和 HTTPS 网关要求见 [REMOTE_ACCESS.md](REMOTE_ACCESS.md)。
@@ -112,7 +114,7 @@ HTTP 默认只监听 `127.0.0.1:47381`。可在私有 `config.json` 中改 `port
 
 需要其他本地客户端时运行 `scripts/start.ps1` 或 `scripts/start.sh`，停止用对应的 `stop` 脚本。HTTP MCP 路径为 `/mcp`，健康检查路径为 `/healthz`。跨机器访问须显式设置 `allow_remote: true`，监听指定 IP，提供 TLS 证书和私钥；如果同时开启写入，还须设置 `allow_remote_write: true`。建议通过私有 VPN 连接，并把监听地址限制为 VPN 网卡 IP。不要把端口直接映射到公网。部署方案和边界见 [REMOTE_ACCESS.md](REMOTE_ACCESS.md)。
 
-GPT 快速聊天即使在桌面 App 中打开，MCP 连接仍须在 ChatGPT 一侧注册。仅安装本地插件或在 `hosts` 文件中添加名称不会使快速聊天获得本机 MCP 工具。ChatGPT 不能呈现自定义静态 API key；长期 HTTPS 接入应使用成熟的 OAuth 2.1 身份提供商，并可在网关校验 OpenAI 的客户端 mTLS 证书。现有静态 Bearer Token 适合私有 Codex 客户端和受控网关到服务的最后一跳，不能当作多用户公网认证。[官方认证要求](https://developers.openai.com/plugins/build/auth)
+GPT 快速聊天即使在桌面 App 中打开，MCP 连接仍须在 ChatGPT 一侧注册。仅安装本地插件或在 `hosts` 文件中添加名称不会使快速聊天获得本机 MCP 工具。ChatGPT 不能呈现自定义静态 API key。Cloudflare Access 模式通过 Managed OAuth 让客户端登录，并由本服务验证 `Cf-Access-Jwt-Assertion`；原有静态 Bearer Token 只用于其他私有 HTTP 客户端。[OpenAI 认证要求](https://developers.openai.com/plugins/build/auth)、[Cloudflare Managed OAuth](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/managed-oauth/)
 
 ## 验证和故障排查
 

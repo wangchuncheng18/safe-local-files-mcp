@@ -17,6 +17,9 @@ type Config struct {
 	Listen                 string           `json:"listen"`
 	Port                   int              `json:"port"`
 	TokenEnv               string           `json:"token_env"`
+	AuthMode               string           `json:"auth_mode"`
+	CloudflareTeamDomain   string           `json:"cloudflare_team_domain"`
+	CloudflareAudience     string           `json:"cloudflare_audience"`
 	AuditLog               string           `json:"audit_log"`
 	AllowRemote            bool             `json:"allow_remote"`
 	BehindProxy            bool             `json:"behind_proxy"`
@@ -54,6 +57,7 @@ func Defaults() Config {
 		Listen:                 "127.0.0.1",
 		Port:                   47381,
 		TokenEnv:               "SAFE_LOCAL_FILES_TOKEN",
+		AuthMode:               "bearer_token",
 		AuditLog:               "./data/audit.jsonl",
 		DenyGlobs:              []string{".git", ".git/**", ".ssh", ".ssh/**", ".aws", ".aws/**", ".azure", ".azure/**", ".kube", ".kube/**", "node_modules", "node_modules/**", ".env", ".env.*", "*.pem", "*.key", "*.pfx", "*.p12", "*credential*", "*secret*", "id_rsa*", "id_ed25519*"},
 		AllowExtensions:        []string{".txt", ".md", ".markdown", ".json", ".jsonl", ".csv", ".tsv", ".yaml", ".yml", ".toml", ".ini", ".conf", ".log", ".xml", ".html", ".htm", ".css", ".js", ".jsx", ".ts", ".tsx", ".py", ".go", ".rs", ".java", ".c", ".h", ".cpp", ".hpp", ".cs", ".sql", ".sh", ".ps1"},
@@ -185,8 +189,22 @@ func (c *Config) normalize(requireToken bool) error {
 		return errors.New("token_env is required")
 	}
 	c.Token = os.Getenv(c.TokenEnv)
-	if requireToken && len(c.Token) < 32 {
+	if c.AuthMode != "bearer_token" && c.AuthMode != "cloudflare_access" {
+		return errors.New("auth_mode must be bearer_token or cloudflare_access")
+	}
+	if requireToken && c.AuthMode == "bearer_token" && len(c.Token) < 32 {
 		return fmt.Errorf("environment variable %s must contain a token of at least 32 characters", c.TokenEnv)
+	}
+	if requireToken && c.AuthMode == "cloudflare_access" {
+		if !c.BehindProxy || !ip.IsLoopback() {
+			return errors.New("cloudflare_access requires behind_proxy=true and a loopback listener")
+		}
+		if !validCloudflareTeamDomain(c.CloudflareTeamDomain) {
+			return errors.New("cloudflare_team_domain must be https://<team>.cloudflareaccess.com")
+		}
+		if len(c.CloudflareAudience) < 16 || len(c.CloudflareAudience) > 256 || strings.ContainsAny(c.CloudflareAudience, " \t\r\n") {
+			return errors.New("cloudflare_audience must be a nonempty Access application AUD tag")
+		}
 	}
 	if c.AuditLog == "" {
 		return errors.New("audit_log is required")
@@ -228,6 +246,26 @@ func (c *Config) normalize(requireToken bool) error {
 		c.AllowExtensions[i] = ext
 	}
 	return nil
+}
+
+func validCloudflareTeamDomain(value string) bool {
+	if !strings.HasPrefix(value, "https://") {
+		return false
+	}
+	host := strings.TrimPrefix(value, "https://")
+	if !strings.HasSuffix(host, ".cloudflareaccess.com") || strings.ContainsAny(host, "/?#@ :\\") {
+		return false
+	}
+	team := strings.TrimSuffix(host, ".cloudflareaccess.com")
+	if team == "" || len(team) > 63 || strings.HasPrefix(team, "-") || strings.HasSuffix(team, "-") {
+		return false
+	}
+	for _, ch := range team {
+		if (ch < 'a' || ch > 'z') && (ch < '0' || ch > '9') && ch != '-' {
+			return false
+		}
+	}
+	return true
 }
 
 func (c Config) Address() string {

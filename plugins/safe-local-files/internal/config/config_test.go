@@ -83,6 +83,30 @@ func TestLoopbackProxyRequiresSeparateWriteOptIn(t *testing.T) {
 	}
 }
 
+func TestCloudflareAccessRequiresProxyAndExactTeamDomain(t *testing.T) {
+	t.Setenv("SAFE_LOCAL_FILES_TOKEN", "")
+	root := t.TempDir()
+	configPath := filepath.Join(t.TempDir(), "config.json")
+	base := `{"root":` + quote(root) + `,"audit_log":` + quote(filepath.Join(t.TempDir(), "audit.jsonl")) + `,"auth_mode":"cloudflare_access","cloudflare_team_domain":"https://example.cloudflareaccess.com","cloudflare_audience":"0123456789abcdef"`
+	if err := os.WriteFile(configPath, []byte(base+`}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(configPath); err == nil {
+		t.Fatal("Cloudflare Access accepted without proxy mode")
+	}
+	if err := os.WriteFile(configPath, []byte(base+`,"behind_proxy":true}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(configPath); err != nil {
+		t.Fatalf("Cloudflare Access rejected without static token: %v", err)
+	}
+	for _, domain := range []string{"http://example.cloudflareaccess.com", "https://example.cloudflareaccess.com.evil.test", "https://example.cloudflareaccess.com/path", "https://example.cloudflareaccess.com:443"} {
+		if validCloudflareTeamDomain(domain) {
+			t.Fatalf("accepted unsafe team domain %q", domain)
+		}
+	}
+}
+
 func quote(value string) string {
 	result, _ := json.Marshal(value)
 	return string(result)

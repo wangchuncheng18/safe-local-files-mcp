@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/wangchuncheng18/safe-local-files-mcp/internal/accessjwt"
 	"github.com/wangchuncheng18/safe-local-files-mcp/internal/audit"
 	"github.com/wangchuncheng18/safe-local-files-mcp/internal/config"
 	"github.com/wangchuncheng18/safe-local-files-mcp/internal/safefs"
@@ -25,6 +26,7 @@ type Service struct {
 	server  *mcp.Server
 	sem     chan struct{}
 	limiter *rateLimiter
+	access  *accessjwt.Verifier
 }
 
 type ListInput struct {
@@ -117,6 +119,9 @@ func New(cfg config.Config) (*Service, error) {
 		sem:     make(chan struct{}, cfg.MaxConcurrency),
 		limiter: newRateLimiter(cfg.RequestsPerMinute),
 	}
+	if cfg.AuthMode == "cloudflare_access" {
+		s.access = accessjwt.New(cfg.CloudflareTeamDomain, cfg.CloudflareAudience)
+	}
 	instructions := "Access to one configured local directory. Paths are relative to the root. Secret-like files and content may be denied or redacted. Use search before fetch when locating documents."
 	if cfg.HasWriteTools() {
 		instructions += " Write tools are restricted by independent configuration flags. Confirm the intended path and content before calling a write tool."
@@ -124,7 +129,7 @@ func New(cfg config.Config) (*Service, error) {
 		instructions += " This instance is read-only; do not claim write access."
 	}
 	s.server = mcp.NewServer(
-		&mcp.Implementation{Name: "safe-local-files", Version: "v0.2.2"},
+		&mcp.Implementation{Name: "safe-local-files", Version: "v0.2.3"},
 		&mcp.ServerOptions{
 			Instructions: instructions,
 			Capabilities: &mcp.ServerCapabilities{},
@@ -288,10 +293,18 @@ func (s *Service) guard(next http.Handler) http.Handler {
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return
 		}
-		provided := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
-		if len(provided) != len(s.cfg.Token) || subtle.ConstantTimeCompare([]byte(provided), []byte(s.cfg.Token)) != 1 {
+		authorized := false
+		if s.access != nil {
+			authorized = s.access.Verify(r.Context(), r.Header.Get("Cf-Access-Jwt-Assertion")) == nil
+		} else {
+			provided := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+			authorized = len(provided) == len(s.cfg.Token) && subtle.ConstantTimeCompare([]byte(provided), []byte(s.cfg.Token)) == 1
+		}
+		if !authorized {
 			s.audit.Write(audit.Event{Event: "auth", Outcome: "denied", RemoteHash: remoteHash})
-			w.Header().Set("WWW-Authenticate", "Bearer")
+			if s.access == nil {
+				w.Header().Set("WWW-Authenticate", "Bearer")
+			}
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}

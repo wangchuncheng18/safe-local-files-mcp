@@ -31,3 +31,5 @@ Windows 在仓库根目录运行 `.\install.ps1`；macOS/Linux 运行 `./install
 **为什么朋友不能访问我的文件？** 每台电脑的 `root` 都是本地私有配置，默认没有跨机器连接。仓库不包含任何人的私有配置或文件。
 
 **能从另一台电脑或 GPT 快速聊天访问吗？** 可以。每位朋友在自己的机器部署服务，并为该机器选择私有隧道或 HTTPS 地址；连接地址决定访问的是哪台机器的授权目录。仅改 `hosts` 文件不能让云端 GPT 快速聊天进入内网。请先阅读 [REMOTE_ACCESS.md](REMOTE_ACCESS.md)。不建议直接做路由器公网端口映射。
+
+**可以用 cloudflared 吗？** 可以，推荐 Named Tunnel 配合 Cloudflare Access Managed OAuth。每位朋友需要自己的 Cloudflare 域名、Zero Trust 团队、仅允许自己登录的 Access 策略和 Tunnel。服务端须设为 `cloudflare_access` 模式并验证 Access JWT。无域名的随机 Quick Tunnel 不适合长期插件地址。完整步骤见 [CLOUDFLARE.md](CLOUDFLARE.md)。

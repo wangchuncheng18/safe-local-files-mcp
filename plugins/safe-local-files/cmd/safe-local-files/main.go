@@ -18,7 +18,7 @@ import (
 	serverpkg "github.com/wangchuncheng18/safe-local-files-mcp/internal/server"
 )
 
-var version = "0.2.2"
+var version = "0.2.3"
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
@@ -126,7 +126,7 @@ func validate(args []string) {
 	if _, err := serverpkg.New(cfg); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("valid: root is accessible, listen=%s, token_env=%s, audit logging is writable\n", cfg.Address(), cfg.TokenEnv)
+	fmt.Printf("valid: root is accessible, listen=%s, auth_mode=%s, audit logging is writable\n", cfg.Address(), cfg.AuthMode)
 }
 
 func token() {
