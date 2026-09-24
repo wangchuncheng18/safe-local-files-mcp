@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { goos: windows, goarch: amd64, ext: .exe }
+          - { goos: windows, goarch: arm64, ext: .exe }
+          - { goos: darwin, goarch: amd64, ext: "" }
+          - { goos: darwin, goarch: arm64, ext: "" }
+          - { goos: linux, goarch: amd64, ext: "" }
+          - { goos: linux, goarch: arm64, ext: "" }
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plugins/safe-local-files
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: plugins/safe-local-files/go.mod
+          cache-dependency-path: plugins/safe-local-files/go.sum
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          mkdir -p dist/package/bin
+          go build -trimpath -ldflags "-s -w -X main.version=${GITHUB_REF_NAME#v}" -o "dist/package/bin/safe-local-files${{ matrix.ext }}" ./cmd/safe-local-files
+          cp -R .codex-plugin skills scripts example-data dist/package/
+          cp plugin.json mcp.json .mcp.json config.example.json README.md dist/package/
+          cd dist
+          tar -czf "safe-local-files-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" package
+          sha256sum "safe-local-files-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" > "safe-local-files-${{ matrix.goos }}-${{ matrix.goarch }}.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: safe-local-files-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            plugins/safe-local-files/dist/*.tar.gz
+            plugins/safe-local-files/dist/*.sha256
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: safe-local-files-*
+          merge-multiple: true
+          path: dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

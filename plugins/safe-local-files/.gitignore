@@ -1,0 +1,9 @@
+/bin/
+/dist/
+/data/
+/config.json
+/*.pid
+/*.log
+*.exe
+*.test
+.DS_Store

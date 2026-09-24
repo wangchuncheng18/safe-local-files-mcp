@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "safe_local_files": {
+      "type": "streamable-http",
+      "url": "http://127.0.0.1:8765/mcp",
+      "bearer_token_env_var": "SAFE_LOCAL_FILES_TOKEN"
+    }
+  }
+}
