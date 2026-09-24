@@ -202,6 +202,12 @@ func (s *Service) Handler() http.Handler {
 	return securityHeaders(mux)
 }
 
+// Run serves MCP over the supplied transport. Stdio mode lets local clients
+// launch the server on demand without opening a TCP port.
+func (s *Service) Run(ctx context.Context, transport mcp.Transport) error {
+	return s.server.Run(ctx, transport)
+}
+
 func (s *Service) guard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		remote := remoteIP(r)

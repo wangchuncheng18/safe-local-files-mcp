@@ -57,10 +57,18 @@ codex plugin add safe-local-files@personal
 
 Restart the ChatGPT desktop app and start a new task after installation. Existing tasks do not reload plugin tools. The bundled MCP connection reads its bearer token from `SAFE_LOCAL_FILES_TOKEN`.
 
-The default MCP URL is `http://127.0.0.1:8765/mcp`. If you change the port, update both the private server config and these plugin files before reinstalling:
+The default MCP URL is `http://127.0.0.1:8765/mcp`. The binary also supports `stdio` so a local Codex client can launch it on demand without depending on a background port. If you change the HTTP port, update both the private server config and these plugin files before reinstalling:
 
 - `plugins/safe-local-files/mcp.json`
 - `plugins/safe-local-files/.mcp.json`
+
+For the most reliable local Codex setup, register the binary as an on-demand stdio server after building it. Replace the paths for your platform:
+
+```powershell
+codex mcp add safe_local_files -- "E:\work\safe-local-files-mcp\plugins\safe-local-files\bin\safe-local-files.exe" stdio --config "$env:LOCALAPPDATA\SafeLocalFiles\config.json"
+```
+
+With stdio registration, Codex owns the server process and no background HTTP listener is needed. Start a new task after changing MCP registration.
 
 Plugin-scoped tool policy can further restrict discovery:
 
@@ -103,7 +111,7 @@ The service does no background indexing or filesystem watching. It opens files o
 
 ## Compatibility
 
-Release builds target Windows, macOS, and Linux on AMD64 and ARM64. The server uses Streamable HTTP MCP and the official Go SDK. Localhost access requires a local/self-hosted Codex or ChatGPT environment; a cloud-only browser session cannot directly reach your machine's `127.0.0.1`.
+Release builds target Windows, macOS, and Linux on AMD64 and ARM64. The server supports stdio and Streamable HTTP MCP using the official Go SDK. Stdio is preferred for local Codex use. Localhost HTTP access requires a local/self-hosted Codex or ChatGPT environment; a cloud-only browser session cannot directly reach your machine's `127.0.0.1`.
 
 ## Development
 

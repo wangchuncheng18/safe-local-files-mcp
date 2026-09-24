@@ -13,11 +13,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/wangchuncheng18/safe-local-files-mcp/internal/config"
 	serverpkg "github.com/wangchuncheng18/safe-local-files-mcp/internal/server"
 )
 
-var version = "0.1.0"
+var version = "0.1.1"
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
@@ -28,6 +29,8 @@ func main() {
 	switch os.Args[1] {
 	case "serve":
 		serve(os.Args[2:])
+	case "stdio":
+		stdio(os.Args[2:])
 	case "validate":
 		validate(os.Args[2:])
 	case "token":
@@ -37,6 +40,23 @@ func main() {
 	default:
 		usage()
 		os.Exit(2)
+	}
+}
+
+func stdio(args []string) {
+	flags := flag.NewFlagSet("stdio", flag.ExitOnError)
+	configPath := flags.String("config", envOr("SLFM_CONFIG", "config.json"), "path to JSON config")
+	_ = flags.Parse(args)
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	service, err := serverpkg.New(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := service.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+		log.Fatal(err)
 	}
 }
 
@@ -116,5 +136,5 @@ func envOr(name, fallback string) string {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: safe-local-files <serve|validate|token|version> [options]")
+	fmt.Fprintln(os.Stderr, "usage: safe-local-files <serve|stdio|validate|token|version> [options]")
 }

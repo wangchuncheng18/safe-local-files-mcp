@@ -1,6 +1,6 @@
 {
   "name": "safe-local-files",
-  "version": "0.1.0+codex.20260924032455",
+  "version": "0.1.1+codex.20260924042428",
   "description": "Audited, least-privilege, read-only access to one local directory through MCP.",
   "author": {
     "name": "Safe Local Files Contributors"

@@ -17,6 +17,6 @@ chmod +x scripts/*.sh
 ./scripts/start.sh
 ```
 
-The first start uses `example-data`. Edit the private runtime config created by the script and set `root` to the narrowest directory that the model may read. The MCP URL is `http://127.0.0.1:8765/mcp`, authenticated with the `SAFE_LOCAL_FILES_TOKEN` environment variable.
+The first start uses `example-data`. Edit the private runtime config created by the script and set `root` to the narrowest directory that the model may read. The MCP URL is `http://127.0.0.1:8765/mcp`, authenticated with the `SAFE_LOCAL_FILES_TOKEN` environment variable. Local Codex clients may instead run `safe-local-files stdio --config <path>` so the client starts and stops the server with the conversation and no HTTP listener is required.
 
 See the repository root README, security policy, and threat model for complete installation and operational guidance.
