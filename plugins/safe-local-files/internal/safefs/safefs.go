@@ -72,9 +72,18 @@ func New(cfg config.Config) (*FS, error) {
 		if info.Mode()&os.ModeSymlink != 0 {
 			return nil, errors.New("configured root may not be a symbolic link when follow_symlinks=false")
 		}
-		if resolved, err := filepath.EvalSymlinks(root); err == nil && !samePath(root, resolved) {
+		resolved, err := filepath.EvalSymlinks(root)
+		if err != nil {
+			return nil, fmt.Errorf("resolve root: %w", err)
+		}
+		parent, err := filepath.EvalSymlinks(filepath.Dir(root))
+		if err != nil {
+			return nil, fmt.Errorf("resolve root parent: %w", err)
+		}
+		if !samePath(filepath.Join(parent, filepath.Base(root)), resolved) {
 			return nil, errors.New("configured root may not be a junction or symbolic link when follow_symlinks=false")
 		}
+		root = resolved
 	}
 	exts := make(map[string]struct{}, len(cfg.AllowExtensions))
 	for _, ext := range cfg.AllowExtensions {

@@ -18,7 +18,7 @@ import (
 	serverpkg "github.com/wangchuncheng18/safe-local-files-mcp/internal/server"
 )
 
-var version = "0.2.4"
+var version = "0.2.5"
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)

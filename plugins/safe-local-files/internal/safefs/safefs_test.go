@@ -77,3 +77,29 @@ func TestSearchRedactsSecretLikeMatchingLine(t *testing.T) {
 		t.Fatalf("secret preview was exposed: %q", matches[0].Preview)
 	}
 }
+
+func TestRootAllowsSymlinkInAncestorButNotAtRoot(t *testing.T) {
+	base := t.TempDir()
+	realParent := filepath.Join(base, "real-parent")
+	root := filepath.Join(realParent, "approved")
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(base, "alias")
+	if err := os.Symlink(realParent, alias); err != nil {
+		t.Skipf("symlinks unavailable on this runner: %v", err)
+	}
+	cfg := config.Defaults()
+	cfg.Root = filepath.Join(alias, "approved")
+	fs, err := New(cfg)
+	if err != nil {
+		t.Fatalf("ancestor symlink rejected: %v", err)
+	}
+	if _, err := fs.Stat("."); err != nil {
+		t.Fatalf("approved root unavailable: %v", err)
+	}
+	cfg.Root = alias
+	if _, err := New(cfg); err == nil {
+		t.Fatal("symlink used as the root was accepted")
+	}
+}

@@ -129,7 +129,7 @@ func New(cfg config.Config) (*Service, error) {
 		instructions += " This instance is read-only; do not claim write access."
 	}
 	s.server = mcp.NewServer(
-		&mcp.Implementation{Name: "safe-local-files", Version: "v0.2.4"},
+		&mcp.Implementation{Name: "safe-local-files", Version: "v0.2.5"},
 		&mcp.ServerOptions{
 			Instructions: instructions,
 			Capabilities: &mcp.ServerCapabilities{},
