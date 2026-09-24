@@ -2,11 +2,14 @@
 
 把此仓库链接发给朋友即可：[GitHub 项目](https://github.com/wangchuncheng18/safe-local-files-mcp)。程序不会把你的电脑目录共享给朋友。朋友安装后在**自己的电脑**选择一个目录，拥有独立的私有配置和 Token。
 
+如果朋友的目标是 **GPT 快速聊天读取自己机器的目录**，请直接把 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md) 发给他。里面有可粘贴给他本地 Codex 的任务文本，以及 Cloudflare 域名、Access 和 ChatGPT MCP 连接的逐步验收。当前先保持只读。
+
 ## 朋友需要准备什么
 
 - Windows、macOS 或 Linux 电脑；已安装 Git、Go 1.25+ 和 Codex CLI。
 - 一个专门给 AI 使用的目录。建议先放少量不敏感的文本文件进行测试。
 - 安装时能运行 PowerShell（Windows）或终端（macOS/Linux）。
+- 若要让 GPT 快速聊天访问，还需自己控制并已接入 Cloudflare 的域名、Cloudflare Zero Trust 账号和自己的 ChatGPT MCP 连接。
 
 Windows 在仓库根目录运行 `.\install.ps1`；macOS/Linux 运行 `./install.sh`。安装脚本会编译适合本机的程序并注册 `safe_local_files`。详细命令和配置文件位置见 [README.md](README.md) 或 [INSTALL_FOR_AGENTS.md](INSTALL_FOR_AGENTS.md)。也可以把后者交给 AI 助手按步骤操作。
 

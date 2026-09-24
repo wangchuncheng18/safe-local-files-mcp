@@ -2,6 +2,8 @@
 
 这条路线用于 GPT 快速聊天访问自己电脑或远程服务器上的一个授权目录。每台数据机器各自安装 Safe Local Files，设置自己的 `root`、Cloudflare 域名、Access 应用和 Tunnel。MCP 地址选择数据机器，工具参数只有该机器 `root` 内的相对路径。默认只读；此文不要求开放路由器端口。
 
+朋友从零开始可先读 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md)。统一命名建议：Tunnel 用 `safe-local-files`，主机名用 `files.<自己的域名>`；尖括号中的域名必须由部署者控制。
+
 ## 前置条件
 
 1. 一个 Cloudflare 账号，以及已接入该账号的域名。固定的 `https://files.example.com/mcp` 需要域名；随机 `trycloudflare.com` Quick Tunnel 仅供临时测试，不能作为长期插件地址。[Cloudflare Tunnel 要求](https://developers.cloudflare.com/tunnel/get-started/)
@@ -32,6 +34,8 @@
 ```
 
 Cloudflare 模式逐请求验证 `Cf-Access-Jwt-Assertion` 的 RS256 签名、`iss`、`aud`、有效期和生效时间；签名公钥仅从配置的 Cloudflare 团队域名取得。缺少 JWT 的本机 HTTP 请求也会被拒绝。`stdio` 模式仍可供本机 Codex 使用，HTTP 静态 Token 不会被当作 Cloudflare 登录凭据。[Cloudflare JWT 验证要求](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/)
+
+在开始 Tunnel 前运行 `safe-local-files validate --config <私有配置绝对路径> --require-cloudflare-read-only`。这项检查要求回环监听、Cloudflare Access 鉴权以及所有远程和写入开关关闭；两种启动脚本也会自动执行它。
 
 ## 在 Cloudflare 建立认证与固定地址
 

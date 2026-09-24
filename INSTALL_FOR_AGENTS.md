@@ -2,6 +2,8 @@
 
 本文件是一份可执行的安装清单。执行前确定数据机器的操作系统、**该机器**授权目录的绝对路径、期望的写权限，以及客户端是 Codex 任务还是 GPT 快速聊天。默认使用只读。不要把作者电脑的路径复制到另一台机器。
 
+**本项目面向 GPT 快速聊天的默认路线是 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md) 的 Cloudflare Tunnel + Access。** 完成安装后仍须分别验证本机 Codex 和 GPT 快速聊天。若用户缺少已接入 Cloudflare 的域名或账号登录，不要用猜测的主机名代替；报告待完成的账号步骤并停在公网接入之前。
+
 若用户已经有 Release 包而不想安装 Go，可使用对应系统和架构的归档并校验 SHA-256；从源码安装时，根目录 `install.ps1` / `install.sh` 会调用 `scripts/build.ps1` / `scripts/build.sh`。单独构建命令为 Windows 的 `.\plugins\safe-local-files\scripts\build.ps1`，以及 macOS/Linux 的 `./plugins/safe-local-files/scripts/build.sh`。归档中的程序位于 `bin/`，安装脚本则位于 GitHub 仓库根目录。
 
 ## 任务约束
@@ -77,9 +79,7 @@ codex mcp get safe_local_files
 
 先选择数据机器：MCP 地址指向哪台机器，`root` 就配置为那台机器的目录。每人部署自己的实例，不要让请求参数指定任意 IP。当前只读验证可以用私有隧道；长期共享使用可部署稳定 HTTPS 网关。详细网络与认证边界见 [REMOTE_ACCESS.md](REMOTE_ACCESS.md)。
 
-私有隧道的操作顺序：在 Platform 创建 `tunnel_id` 并关联目标 ChatGPT 工作区；在数据机器安装官方 `tunnel-client`；使其指向本机 `safe-local-files stdio --config <私有配置绝对路径>`；运行 `doctor` 确认连接；在 ChatGPT 开发者模式注册 Tunnel 类型 MCP 连接；确认它发现读取工具；新建 GPT 快速聊天，显式启用该连接，仅调用 `stat_path` 检查 `.`。运行密钥仅保存在数据机器私有位置，不能出现在仓库、插件清单、命令输出或对话中。隧道不自动赋予写权限。
-
-HTTPS 地址的推荐顺序见 [CLOUDFLARE.md](CLOUDFLARE.md)：为每台数据机器准备已接入 Cloudflare 的域名；MCP 进程保持回环监听，设 `behind_proxy=true` 和 `auth_mode=cloudflare_access`，配置团队域名与 Access AUD tag；先创建仅允许本人登录的 Access MCP 应用并开启 Managed OAuth，再发布 Named Tunnel 地址；将请求转发至同机 `/mcp`。先验证未认证请求被拒绝，再在 ChatGPT 开发者模式注册 HTTPS MCP 连接。**ChatGPT 不支持自定义静态 API key；不能把现有 Token 填进插件 URL 代替 OAuth。** 没有域名和 Access 配置时，不要宣称 HTTPS 路线已可用。
+HTTPS 地址的推荐顺序见 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md) 和 [CLOUDFLARE.md](CLOUDFLARE.md)：为每台数据机器准备已接入 Cloudflare 的域名；MCP 进程保持回环监听，设 `behind_proxy=true` 和 `auth_mode=cloudflare_access`，配置团队域名与 Access AUD tag；先创建仅允许本人登录的 Access MCP 应用并开启 Managed OAuth，再发布 Named Tunnel 地址；将请求转发至同机 `/mcp`。用 `validate --require-cloudflare-read-only` 和未认证 HTTP 401 验证源站，再在 ChatGPT 开发者模式注册 HTTPS MCP 连接。不能把现有静态 Token 填进插件 URL 代替 OAuth。没有域名和 Access 配置时，不要宣称 HTTPS 路线已可用。
 
 ## 验收
 

@@ -2,3 +2,4 @@
 .vscode/
 *.swp
 *.tmp
+plugins/safe-local-files/.app.json

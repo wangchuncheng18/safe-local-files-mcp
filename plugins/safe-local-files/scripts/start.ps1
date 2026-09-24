@@ -59,7 +59,7 @@ $process = Start-Process -FilePath $BinaryPath -ArgumentList @("serve", "--confi
 for ($i = 0; $i -lt 20; $i++) {
     Start-Sleep -Milliseconds 250
     try {
-        $health = Invoke-RestMethod -Uri $healthUri -TimeoutSec 2 -NoProxy -SkipCertificateCheck
+        $health = Invoke-RestMethod -Uri $healthUri -TimeoutSec 2
         if ($health.status -eq "ok") {
             Write-Output "Safe Local Files started (PID $($process.Id)). Config: $ConfigPath"
             Write-Output "Restart Codex/ChatGPT once after first setup so it receives SAFE_LOCAL_FILES_TOKEN."

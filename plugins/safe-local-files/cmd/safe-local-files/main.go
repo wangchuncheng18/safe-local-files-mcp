@@ -18,7 +18,7 @@ import (
 	serverpkg "github.com/wangchuncheng18/safe-local-files-mcp/internal/server"
 )
 
-var version = "0.2.3"
+var version = "0.2.4"
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
@@ -118,15 +118,28 @@ func serve(args []string) {
 func validate(args []string) {
 	flags := flag.NewFlagSet("validate", flag.ExitOnError)
 	configPath := flags.String("config", envOr("SLFM_CONFIG", "config.json"), "path to JSON config")
+	requireCloudflareReadOnly := flags.Bool("require-cloudflare-read-only", false, "require a loopback Cloudflare Access HTTP server with all write tools disabled")
 	_ = flags.Parse(args)
 	cfg, err := config.Load(*configPath)
 	if err != nil {
 		log.Fatal(err)
 	}
+	if *requireCloudflareReadOnly {
+		if err := checkCloudflareReadOnly(cfg); err != nil {
+			log.Fatal(err)
+		}
+	}
 	if _, err := serverpkg.New(cfg); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("valid: root is accessible, listen=%s, auth_mode=%s, audit logging is writable\n", cfg.Address(), cfg.AuthMode)
+}
+
+func checkCloudflareReadOnly(cfg config.Config) error {
+	if cfg.AuthMode != "cloudflare_access" || !cfg.BehindProxy || cfg.Listen != "127.0.0.1" || cfg.AllowRemote || cfg.AllowRemoteWrite || cfg.WritePermissions.Enabled || cfg.HasWriteTools() {
+		return fmt.Errorf("Cloudflare quick-chat setup requires auth_mode=cloudflare_access, 127.0.0.1, behind_proxy=true, and all remote/write flags disabled")
+	}
+	return nil
 }
 
 func token() {
