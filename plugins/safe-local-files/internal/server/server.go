@@ -124,7 +124,7 @@ func New(cfg config.Config) (*Service, error) {
 		instructions += " This instance is read-only; do not claim write access."
 	}
 	s.server = mcp.NewServer(
-		&mcp.Implementation{Name: "safe-local-files", Version: "v0.2.0"},
+		&mcp.Implementation{Name: "safe-local-files", Version: "v0.2.1"},
 		&mcp.ServerOptions{
 			Instructions: instructions,
 			Capabilities: &mcp.ServerCapabilities{},
@@ -301,7 +301,8 @@ func (s *Service) guard(next http.Handler) http.Handler {
 		case <-r.Context().Done():
 			return
 		}
-		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+		maxBodyBytes := max(int64(1<<20), s.cfg.MaxWriteBytes*6+(64<<10))
+		r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
 		next.ServeHTTP(w, r)
 	})
 }

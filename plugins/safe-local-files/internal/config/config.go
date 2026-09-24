@@ -146,10 +146,10 @@ func (c *Config) normalize(requireToken bool) error {
 	if ip == nil {
 		return errors.New("listen must be an IP address")
 	}
-	if !c.AllowRemote && !ip.IsLoopback() {
+	if requireToken && !c.AllowRemote && !ip.IsLoopback() {
 		return errors.New("non-loopback listen address requires allow_remote=true")
 	}
-	if !ip.IsLoopback() {
+	if requireToken && !ip.IsLoopback() {
 		if c.TLSCertFile == "" || c.TLSKeyFile == "" {
 			return errors.New("non-loopback listen address requires tls_cert_file and tls_key_file")
 		}

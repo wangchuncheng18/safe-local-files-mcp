@@ -18,7 +18,7 @@ import (
 	serverpkg "github.com/wangchuncheng18/safe-local-files-mcp/internal/server"
 )
 
-var version = "0.2.0"
+var version = "0.2.1"
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
@@ -55,7 +55,8 @@ func stdio(args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := service.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+	maxFrameBytes := int(cfg.MaxWriteBytes*6 + (64 << 10))
+	if err := service.Run(context.Background(), &mcp.StdioTransport{MaxLineLength: maxFrameBytes}); err != nil {
 		log.Fatal(err)
 	}
 }

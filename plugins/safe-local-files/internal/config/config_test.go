@@ -21,6 +21,13 @@ func TestLoadForStdioDoesNotRequireHTTPToken(t *testing.T) {
 	if _, err := Load(configPath); err == nil {
 		t.Fatal("Load unexpectedly accepted a missing HTTP token")
 	}
+	remoteOnly := `{"root":` + quote(root) + `,"audit_log":` + quote(filepath.Join(t.TempDir(), "audit.jsonl")) + `,"listen":"192.0.2.10","write_permissions":{"enabled":true,"create_files":true}}`
+	if err := os.WriteFile(configPath, []byte(remoteOnly), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := LoadForStdio(configPath); err != nil {
+		t.Fatalf("stdio applied network-only requirements: %v", err)
+	}
 }
 
 func TestRemoteRequiresTLSAndSeparateWriteOptIn(t *testing.T) {
