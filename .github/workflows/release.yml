@@ -39,7 +39,7 @@ jobs:
           go build -trimpath -ldflags "-s -w -X main.version=${GITHUB_REF_NAME#v}" -o "dist/package/bin/safe-local-files${{ matrix.ext }}" ./cmd/safe-local-files
           cp -R .codex-plugin skills scripts example-data dist/package/
           cp plugin.json config.example.json README.md dist/package/
-          cp ../../CLOUDFLARE.md ../../QUICK_CHAT_SETUP.md ../../REMOTE_ACCESS.md ../../INSTALL_FOR_AGENTS.md ../../SHARE_GUIDE.md dist/package/
+          cp ../../CLOUDFLARE.md ../../QUICK_CHAT_SETUP.md ../../SECURE_TUNNEL.md ../../REMOTE_ACCESS.md ../../INSTALL_FOR_AGENTS.md ../../SHARE_GUIDE.md dist/package/
           cd dist
           tar -czf "safe-local-files-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" package
           sha256sum "safe-local-files-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" > "safe-local-files-${{ matrix.goos }}-${{ matrix.goarch }}.sha256"

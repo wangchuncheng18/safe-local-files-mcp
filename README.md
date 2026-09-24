@@ -4,7 +4,7 @@
 
 > 本项目的 GitHub 仓库只分发程序。朋友安装后应选择**自己电脑**上的目录。仓库中没有、也不需要作者电脑的私有文件。
 
-**想让 GPT 快速聊天读取自己的机器？** 直接按 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md) 操作；其中有可以交给朋友的本地 Codex 的完整任务文本。每个人使用自己的授权目录、Cloudflare 域名和 ChatGPT MCP 连接。推荐主机名 `files.<自己的域名>`，Tunnel 名 `safe-local-files`。域名必须由部署者控制并接入 Cloudflare；给它取个名字本身不会生成公网地址。目前目标是只读，写入留待以后单独处理。
+**想让 GPT 快速聊天读取自己的机器？** 无域名时按 [SECURE_TUNNEL.md](SECURE_TUNNEL.md) 建立私有连接；其中有可以交给朋友的本地 Codex 的完整任务文本。若以后要稳定公网 HTTPS 地址，再按 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md) 部署 Cloudflare Tunnel + Access。每个人使用自己的授权目录和 ChatGPT MCP 连接。目前目标是只读，写入留待以后单独处理。
 
 ## 能做什么
 
@@ -106,8 +106,8 @@ HTTP 默认只监听 `127.0.0.1:47381`。可在私有 `config.json` 中改 `port
 | 客户端与网络 | 推荐链路 |
 | --- | --- |
 | 本机 Codex 任务 | `stdio`，无需网络端口 |
-| GPT 快速聊天访问自己的机器 | [Cloudflare Tunnel + Access](QUICK_CHAT_SETUP.md)：自己的稳定 HTTPS 域名 → Cloudflare Managed OAuth → 同机 `127.0.0.1:47381/mcp` |
-| 其他私有隧道方案 | [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)：可用于特定 ChatGPT 工作区，配置步骤与 Cloudflare 路线不同 |
+| GPT 快速聊天访问自己的机器、没有域名 | [Secure MCP Tunnel](SECURE_TUNNEL.md)：OpenAI 私有 Tunnel → 同机 `stdio` MCP；无需公网端口 |
+| 需要稳定公网 HTTPS 地址 | [Cloudflare Tunnel + Access](QUICK_CHAT_SETUP.md)：自己的域名 → Cloudflare Managed OAuth → 同机 `127.0.0.1:47381/mcp` |
 | 内网或 VPN 内的 Codex 客户端 | 使用 VPN 地址的 HTTPS MCP；客户端保存自己的凭据 |
 
 `127.0.0.1` 永远指当前发起连接的机器。内网 DNS、`hosts` 文件或 VPN IP 只对能进入该网络的客户端有效，不能让云端 GPT 快速聊天直接访问本机。完整链路、部署边界和 HTTPS 网关要求见 [REMOTE_ACCESS.md](REMOTE_ACCESS.md)。

@@ -21,4 +21,4 @@ The first start uses `example-data`. Edit the private runtime config created by 
 
 See the repository root README, security policy, and threat model for complete installation and operational guidance.
 
-For a stable GPT quick-chat connection through Cloudflare Tunnel and Access Managed OAuth, see the repository-root `QUICK_CHAT_SETUP.md` and `CLOUDFLARE.md`. Each user needs a domain in their own Cloudflare account, configures their own root directory, and registers their own MCP connection in ChatGPT. Quick Tunnel's random URL is only suitable for temporary tests.
+For private GPT quick-chat access without a domain, see the repository-root `SECURE_TUNNEL.md`; the official `tunnel-client` connects to this MCP server over stdio without a public listener. For a stable public HTTPS address, see `QUICK_CHAT_SETUP.md` and `CLOUDFLARE.md`. Each user configures their own root directory and ChatGPT MCP connection. Quick Tunnel's random URL is only suitable for temporary tests.

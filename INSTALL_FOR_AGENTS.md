@@ -2,7 +2,7 @@
 
 本文件是一份可执行的安装清单。执行前确定数据机器的操作系统、**该机器**授权目录的绝对路径、期望的写权限，以及客户端是 Codex 任务还是 GPT 快速聊天。默认使用只读。不要把作者电脑的路径复制到另一台机器。
 
-**本项目面向 GPT 快速聊天的默认路线是 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md) 的 Cloudflare Tunnel + Access。** 完成安装后仍须分别验证本机 Codex 和 GPT 快速聊天。若用户缺少已接入 Cloudflare 的域名或账号登录，不要用猜测的主机名代替；报告待完成的账号步骤并停在公网接入之前。
+**无域名时，面向 GPT 快速聊天的路线是 [SECURE_TUNNEL.md](SECURE_TUNNEL.md) 的 OpenAI 私有 Tunnel。** 若用户有域名并需要稳定公网 HTTPS 地址，使用 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md) 的 Cloudflare Tunnel + Access。完成安装后仍须分别验证本机 Codex 和 GPT 快速聊天；缺少账号权限或密钥时报告具体待办，不要声称已接通。
 
 若用户已经有 Release 包而不想安装 Go，可使用对应系统和架构的归档并校验 SHA-256；从源码安装时，根目录 `install.ps1` / `install.sh` 会调用 `scripts/build.ps1` / `scripts/build.sh`。单独构建命令为 Windows 的 `.\plugins\safe-local-files\scripts\build.ps1`，以及 macOS/Linux 的 `./plugins/safe-local-files/scripts/build.sh`。归档中的程序位于 `bin/`，安装脚本则位于 GitHub 仓库根目录。
 
@@ -78,6 +78,8 @@ codex mcp get safe_local_files
 ## GPT 快速聊天或远程客户端
 
 先选择数据机器：MCP 地址指向哪台机器，`root` 就配置为那台机器的目录。每人部署自己的实例，不要让请求参数指定任意 IP。当前只读验证可以用私有隧道；长期共享使用可部署稳定 HTTPS 网关。详细网络与认证边界见 [REMOTE_ACCESS.md](REMOTE_ACCESS.md)。
+
+无域名且要读取真实私有目录时，优先按 [SECURE_TUNNEL.md](SECURE_TUNNEL.md) 操作：从 OpenAI 官方 Release 安装并核验 `tunnel-client`，在用户自己的 Platform 组织创建 Tunnel 和只供运行的 API Key，客户端用 `file:` 引用本机私有密钥文件并通过 `stdio` 连接本程序。用 managed runtime 状态验证健康和就绪，再在 ChatGPT 创建 Tunnel 类型连接。不要用匿名 Cloudflare Quick Tunnel 公开真实授权目录。
 
 HTTPS 地址的推荐顺序见 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md) 和 [CLOUDFLARE.md](CLOUDFLARE.md)：为每台数据机器准备已接入 Cloudflare 的域名；MCP 进程保持回环监听，设 `behind_proxy=true` 和 `auth_mode=cloudflare_access`，配置团队域名与 Access AUD tag；先创建仅允许本人登录的 Access MCP 应用并开启 Managed OAuth，再发布 Named Tunnel 地址；将请求转发至同机 `/mcp`。用 `validate --require-cloudflare-read-only` 和未认证 HTTP 401 验证源站，再在 ChatGPT 开发者模式注册 HTTPS MCP 连接。不能把现有静态 Token 填进插件 URL 代替 OAuth。没有域名和 Access 配置时，不要宣称 HTTPS 路线已可用。
 
