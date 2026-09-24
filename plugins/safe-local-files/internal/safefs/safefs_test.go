@@ -25,6 +25,32 @@ func testFS(t *testing.T, action string) (*FS, string) {
 	return fs, root
 }
 
+func TestListRespectsDepthFromRoot(t *testing.T) {
+	fs, root := testFS(t, "deny")
+	if err := os.Mkdir(filepath.Join(root, "nested"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for name := range map[string]bool{"top.txt": true, "nested/child.txt": true, ".env": true} {
+		if err := os.WriteFile(filepath.Join(root, filepath.FromSlash(name)), []byte("test"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := fs.List(".", 1, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 2 || entries[0].Path != "nested" || entries[1].Path != "top.txt" {
+		t.Fatalf("depth 1 should contain only allowed top-level entries: %+v", entries)
+	}
+	entries, err = fs.List(".", 2, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 3 || entries[1].Path != "nested/child.txt" {
+		t.Fatalf("depth 2 should include nested child: %+v", entries)
+	}
+}
+
 func TestReadDeniesTraversalPolicyAndSecrets(t *testing.T) {
 	fs, root := testFS(t, "deny")
 	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("public information\nsecond line"), 0o600); err != nil {

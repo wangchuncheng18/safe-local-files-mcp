@@ -199,7 +199,7 @@ func (f *FS) List(rel string, depth, limit int) ([]Entry, error) {
 			}
 			return nil
 		}
-		currentDepth := strings.Count(filepath.Clean(path), string(filepath.Separator)) - baseDepth + 1
+		currentDepth := strings.Count(filepath.Clean(path), string(filepath.Separator)) - baseDepth
 		if currentDepth > depth {
 			if d.IsDir() {
 				return filepath.SkipDir
