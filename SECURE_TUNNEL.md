@@ -22,13 +22,15 @@ Windows 建议保存到 `%LOCALAPPDATA%\SafeLocalFiles\openai-tunnel-api-key`；
 
 ```powershell
 $client = "$env:LOCALAPPDATA\SafeLocalFiles\tools\tunnel-client.exe"
-$mcp = (Resolve-Path .\plugins\safe-local-files\bin\safe-local-files.exe).Path
-$cfg = "$env:LOCALAPPDATA\SafeLocalFiles\config.json"
+$mcp = (Resolve-Path .\plugins\safe-local-files\bin\safe-local-files.exe).Path.Replace('\', '/')
+$cfg = "$env:LOCALAPPDATA\SafeLocalFiles\config.json".Replace('\', '/')
 $key = "$env:LOCALAPPDATA\SafeLocalFiles\openai-tunnel-api-key"
 $mcpCommand = '"{0}" stdio --config "{1}"' -f $mcp, $cfg
 & $client runtimes connect --alias wccwinpc --tunnel-id '<自己的 tunnel_id>' --runtime-api-key "file:$key" --mcp-command $mcpCommand
 & $client runtimes status wccwinpc --json
 ```
+
+Windows 上的 `--mcp-command` 用正斜杠路径：当前 tunnel-client 对命令行做 shell 风格解析，直接传 `E:\...` 可能吞掉反斜杠并导致找不到可执行文件。如果浏览器能访问 OpenAI 而客户端直连 `api.openai.com:443` 超时，检查 Windows 的系统代理；只为运行 `runtimes connect` / `runtimes status` 的进程设置 `HTTPS_PROXY` 和 `HTTP_PROXY`，例如 `$env:HTTPS_PROXY='http://127.0.0.1:<本机代理端口>'`。不要把某个人的代理端口硬编码进仓库。确认客户端的托管进程也继承了代理环境，并以 `healthy=true`、`ready=true` 为准。
 
 macOS/Linux 可在项目根目录执行：
 
@@ -46,6 +48,6 @@ tunnel-client runtimes status wccwinpc --json
 
 ## 接入快速聊天并验收
 
-在 ChatGPT 开发者模式中打开 [Plugins](https://chatgpt.com/plugins)，添加 MCP 连接，**Connection 选择 Tunnel**，选取或填写自己的 `tunnel_id`。必须在本机 tunnel-client 正常运行时创建连接，确认工具发现包含 `stat_path`、`read_file` 等只读工具且没有 `write_file`、`create_directory`。新建 GPT 快速聊天，启用该连接，只让它调用 `stat_path({"path":"."})`。看到真实工具调用并返回 `directory` 才算成功。[官方 ChatGPT 接入步骤](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
+先在 ChatGPT **设置 → 账户安全与登录 → 开发人员模式**开启开发者模式；这会允许添加未经验证的连接器，应只为自己信任的只读服务开启。然后打开 [Plugins](https://chatgpt.com/plugins)，添加 MCP 连接，**Connection 选择 Tunnel**，选取或填写自己的 `tunnel_id`。必须在本机 tunnel-client 正常运行时创建连接，确认工具发现包含 `stat_path`、`read_file` 等只读工具且没有 `write_file`、`create_directory`。新建 GPT 快速聊天，启用该连接，只让它调用 `stat_path({"path":"."})`。看到真实工具调用并返回 `directory` 才算成功。[官方 ChatGPT 接入步骤](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
 
 这条链路只为该用户自己的账号或被关联的工作区提供私有访问。朋友若想让自己的快速聊天读自己的电脑，必须在朋友的机器上重复安装，使用朋友自己的授权目录、Platform Tunnel、运行密钥和 ChatGPT 连接。克隆仓库本身不会让任何人的文件自动公开。
