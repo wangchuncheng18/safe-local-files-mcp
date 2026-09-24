@@ -18,7 +18,7 @@ import (
 	serverpkg "github.com/wangchuncheng18/safe-local-files-mcp/internal/server"
 )
 
-var version = "0.1.1"
+var version = "0.2.0"
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.LUTC)
@@ -47,7 +47,7 @@ func stdio(args []string) {
 	flags := flag.NewFlagSet("stdio", flag.ExitOnError)
 	configPath := flags.String("config", envOr("SLFM_CONFIG", "config.json"), "path to JSON config")
 	_ = flags.Parse(args)
-	cfg, err := config.Load(*configPath)
+	cfg, err := config.LoadForStdio(*configPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -84,8 +84,16 @@ func serve(args []string) {
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Printf("safe-local-files %s listening on http://%s/mcp (root is configured; value omitted)", version, cfg.Address())
-		errCh <- httpServer.ListenAndServe()
+		scheme := "http"
+		if cfg.TLSCertFile != "" {
+			scheme = "https"
+		}
+		log.Printf("safe-local-files %s listening on %s://%s/mcp (root is configured; value omitted)", version, scheme, cfg.Address())
+		if cfg.TLSCertFile != "" {
+			errCh <- httpServer.ListenAndServeTLS(cfg.TLSCertFile, cfg.TLSKeyFile)
+		} else {
+			errCh <- httpServer.ListenAndServe()
+		}
 	}()
 
 	sigCh := make(chan os.Signal, 1)

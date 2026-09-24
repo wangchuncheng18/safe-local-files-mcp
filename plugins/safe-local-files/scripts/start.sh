@@ -19,7 +19,7 @@ if [ ! -f "$CONFIG" ]; then
 {
   "root": "$PLUGIN_ROOT/example-data",
   "listen": "127.0.0.1",
-  "port": 8765,
+  "port": 47381,
   "token_env": "SAFE_LOCAL_FILES_TOKEN",
   "audit_log": "$DATA_DIR/audit.jsonl",
   "allow_remote": false,
@@ -33,7 +33,9 @@ if [ ! -f "$CONFIG" ]; then
   "search_timeout_ms": 2000,
   "max_concurrency": 4,
   "requests_per_minute": 60,
-  "sensitive_content_action": "deny"
+  "sensitive_content_action": "deny",
+  "max_write_bytes": 1048576,
+  "write_permissions": {"enabled": false, "create_files": false, "overwrite_files": false, "create_directories": false}
 }
 EOF
   chmod 600 "$CONFIG"

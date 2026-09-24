@@ -66,3 +66,48 @@ func TestHTTPAuthAndMCPToolCall(t *testing.T) {
 		t.Fatalf("tool returned error: %+v", result.Content)
 	}
 }
+
+func TestWriteToolsAppearOnlyWhenEnabled(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		cfg := config.Defaults()
+		cfg.Root = t.TempDir()
+		cfg.AuditLog = filepath.Join(t.TempDir(), "audit.jsonl")
+		cfg.SearchTime = time.Second
+		cfg.WritePermissions = config.WritePermissions{Enabled: enabled, CreateFiles: true, CreateDirectories: true}
+		service, err := New(cfg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		serverTransport, clientTransport := mcp.NewInMemoryTransports()
+		ctx, cancel := context.WithCancel(context.Background())
+		serverDone := make(chan error, 1)
+		go func() { serverDone <- service.Run(ctx, serverTransport) }()
+		client := mcp.NewClient(&mcp.Implementation{Name: "test-client", Version: "v0.1.0"}, nil)
+		session, err := client.Connect(ctx, clientTransport, nil)
+		if err != nil {
+			cancel()
+			t.Fatal(err)
+		}
+		list, err := session.ListTools(ctx, nil)
+		if err != nil {
+			session.Close()
+			cancel()
+			t.Fatal(err)
+		}
+		foundWrite, foundMkdir := false, false
+		for _, tool := range list.Tools {
+			if tool.Name == "write_file" {
+				foundWrite = true
+			}
+			if tool.Name == "create_directory" {
+				foundMkdir = true
+			}
+		}
+		if foundWrite != enabled || foundMkdir != enabled {
+			t.Errorf("enabled=%v: write=%v mkdir=%v", enabled, foundWrite, foundMkdir)
+		}
+		_ = session.Close()
+		cancel()
+		<-serverDone
+	}
+}

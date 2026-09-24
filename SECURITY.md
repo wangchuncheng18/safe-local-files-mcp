@@ -12,7 +12,7 @@ Include the affected version, operating system, configuration with secrets remov
 
 ## Deployment requirements
 
-- Keep `listen` on a loopback address unless a separate authenticated TLS reverse proxy and host firewall are in place.
+- Keep `listen` on a loopback address for normal use. Non-loopback binding requires explicit opt-in and TLS certificate/key files; restrict it to a VPN address and trusted clients.
 - Use a unique token of at least 32 characters and rotate it after suspected exposure.
 - Put only the narrowest necessary directory under `root`.
 - Keep `follow_symlinks` disabled unless the target layout has been reviewed.
@@ -20,4 +20,4 @@ Include the affected version, operating system, configuration with secrets remov
 - Protect the runtime config, token store, and audit log with operating-system access controls.
 - Do not run the service as administrator/root.
 
-The server intentionally has no write, rename, move, delete, command execution, upload, or arbitrary URL tools.
+Write tools are absent by default. The owner may separately enable text-file creation, text-file overwrite, and directory creation in private configuration. The server has no rename, move, delete, command execution, upload, or arbitrary URL tools. Keep write permissions disabled for sensitive or production directories.

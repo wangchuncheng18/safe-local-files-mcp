@@ -9,7 +9,7 @@
 
 ## Trust boundaries
 
-- MCP client to localhost HTTP server.
+- MCP client to a local stdio process or optional authenticated HTTP server.
 - Requested relative paths to the configured filesystem root.
 - File content to the language model. File content is untrusted data.
 - Local user account to other local users and processes.
@@ -27,20 +27,20 @@
 | Hidden background load | No indexing, no watcher, work only during calls |
 | Audit leakage | No tokens, queries, or file contents in logs; queries are hashed |
 | Prompt injection from files | Plugin skill declares file content untrusted and non-authoritative |
-| Unauthorized modification | No write-capable MCP tools or filesystem mutation paths |
+| Unauthorized modification | No write tools by default; independent create, overwrite, and directory flags; confined filesystem operations and size/content policy |
 
 ## Residual risks
 
 - A process running as the same operating-system user may read environment variables or runtime files permitted to that user.
 - Pattern-based secret detection cannot identify every sensitive datum. Narrow roots and deny rules remain the primary controls.
 - Files that are legitimately readable can contain personal or confidential data. The operator must scope the root and allowlist appropriately.
-- Remote binding without TLS exposes metadata and tokens to the network. The built-in server is intended for loopback use.
+- Non-loopback mode requires TLS and a bearer token, but a compromised client or leaked token can still invoke all enabled operations. Use a private VPN and a narrow root.
 - Audit logs show relative filenames and access timing. Protect and rotate them according to local policy.
 
 ## Explicit non-goals
 
 - Multi-user authorization.
-- Remote internet exposure.
-- Writing or transforming local files.
+- Direct public internet exposure.
+- Deleting, moving, or transforming existing files beyond explicit text overwrite.
 - Full-text indexing of large repositories.
 - Malware scanning or data-loss-prevention classification.

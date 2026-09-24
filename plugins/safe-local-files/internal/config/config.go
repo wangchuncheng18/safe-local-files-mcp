@@ -13,33 +13,45 @@ import (
 )
 
 type Config struct {
-	Root                   string   `json:"root"`
-	Listen                 string   `json:"listen"`
-	Port                   int      `json:"port"`
-	TokenEnv               string   `json:"token_env"`
-	AuditLog               string   `json:"audit_log"`
-	AllowRemote            bool     `json:"allow_remote"`
-	FollowSymlinks         bool     `json:"follow_symlinks"`
-	DenyGlobs              []string `json:"deny_globs"`
-	AllowExtensions        []string `json:"allow_extensions"`
-	MaxFileBytes           int64    `json:"max_file_bytes"`
-	MaxResponseBytes       int      `json:"max_response_bytes"`
-	MaxSearchFiles         int      `json:"max_search_files"`
-	MaxSearchResults       int      `json:"max_search_results"`
-	SearchTimeoutMS        int      `json:"search_timeout_ms"`
-	MaxConcurrency         int      `json:"max_concurrency"`
-	RequestsPerMinute      int      `json:"requests_per_minute"`
-	SensitiveContentAction string   `json:"sensitive_content_action"`
+	Root                   string           `json:"root"`
+	Listen                 string           `json:"listen"`
+	Port                   int              `json:"port"`
+	TokenEnv               string           `json:"token_env"`
+	AuditLog               string           `json:"audit_log"`
+	AllowRemote            bool             `json:"allow_remote"`
+	AllowRemoteWrite       bool             `json:"allow_remote_write"`
+	TLSCertFile            string           `json:"tls_cert_file"`
+	TLSKeyFile             string           `json:"tls_key_file"`
+	FollowSymlinks         bool             `json:"follow_symlinks"`
+	DenyGlobs              []string         `json:"deny_globs"`
+	AllowExtensions        []string         `json:"allow_extensions"`
+	MaxFileBytes           int64            `json:"max_file_bytes"`
+	MaxResponseBytes       int              `json:"max_response_bytes"`
+	MaxSearchFiles         int              `json:"max_search_files"`
+	MaxSearchResults       int              `json:"max_search_results"`
+	SearchTimeoutMS        int              `json:"search_timeout_ms"`
+	MaxConcurrency         int              `json:"max_concurrency"`
+	RequestsPerMinute      int              `json:"requests_per_minute"`
+	SensitiveContentAction string           `json:"sensitive_content_action"`
+	MaxWriteBytes          int64            `json:"max_write_bytes"`
+	WritePermissions       WritePermissions `json:"write_permissions"`
 
 	Token      string        `json:"-"`
 	ConfigDir  string        `json:"-"`
 	SearchTime time.Duration `json:"-"`
 }
 
+type WritePermissions struct {
+	Enabled           bool `json:"enabled"`
+	CreateFiles       bool `json:"create_files"`
+	OverwriteFiles    bool `json:"overwrite_files"`
+	CreateDirectories bool `json:"create_directories"`
+}
+
 func Defaults() Config {
 	return Config{
 		Listen:                 "127.0.0.1",
-		Port:                   8765,
+		Port:                   47381,
 		TokenEnv:               "SAFE_LOCAL_FILES_TOKEN",
 		AuditLog:               "./data/audit.jsonl",
 		DenyGlobs:              []string{".git", ".git/**", ".ssh", ".ssh/**", ".aws", ".aws/**", ".azure", ".azure/**", ".kube", ".kube/**", "node_modules", "node_modules/**", ".env", ".env.*", "*.pem", "*.key", "*.pfx", "*.p12", "*credential*", "*secret*", "id_rsa*", "id_ed25519*"},
@@ -52,10 +64,21 @@ func Defaults() Config {
 		MaxConcurrency:         4,
 		RequestsPerMinute:      60,
 		SensitiveContentAction: "deny",
+		MaxWriteBytes:          1 << 20,
 	}
 }
 
 func Load(path string) (Config, error) {
+	return load(path, true)
+}
+
+// LoadForStdio loads the filesystem policy without requiring an HTTP bearer
+// token. Stdio is bound to client-owned process pipes, not a network listener.
+func LoadForStdio(path string) (Config, error) {
+	return load(path, false)
+}
+
+func load(path string, requireToken bool) (Config, error) {
 	cfg := Defaults()
 	abs, err := filepath.Abs(path)
 	if err != nil {
@@ -70,7 +93,7 @@ func Load(path string) (Config, error) {
 	}
 	cfg.ConfigDir = filepath.Dir(abs)
 	applyEnv(&cfg)
-	if err := cfg.normalize(); err != nil {
+	if err := cfg.normalize(requireToken); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
@@ -96,7 +119,7 @@ func applyEnv(cfg *Config) {
 	}
 }
 
-func (c *Config) normalize() error {
+func (c *Config) normalize(requireToken bool) error {
 	if c.Root == "" {
 		return errors.New("root is required")
 	}
@@ -126,6 +149,31 @@ func (c *Config) normalize() error {
 	if !c.AllowRemote && !ip.IsLoopback() {
 		return errors.New("non-loopback listen address requires allow_remote=true")
 	}
+	if !ip.IsLoopback() {
+		if c.TLSCertFile == "" || c.TLSKeyFile == "" {
+			return errors.New("non-loopback listen address requires tls_cert_file and tls_key_file")
+		}
+		if c.HasWriteTools() && !c.AllowRemoteWrite {
+			return errors.New("non-loopback write access requires allow_remote_write=true")
+		}
+	}
+	if (c.TLSCertFile == "") != (c.TLSKeyFile == "") {
+		return errors.New("tls_cert_file and tls_key_file must be configured together")
+	}
+	if c.TLSCertFile != "" {
+		if !filepath.IsAbs(c.TLSCertFile) {
+			c.TLSCertFile = filepath.Join(c.ConfigDir, c.TLSCertFile)
+		}
+		if !filepath.IsAbs(c.TLSKeyFile) {
+			c.TLSKeyFile = filepath.Join(c.ConfigDir, c.TLSKeyFile)
+		}
+		if _, err := os.Stat(c.TLSCertFile); err != nil {
+			return fmt.Errorf("TLS certificate unavailable: %w", err)
+		}
+		if _, err := os.Stat(c.TLSKeyFile); err != nil {
+			return fmt.Errorf("TLS key unavailable: %w", err)
+		}
+	}
 	if c.Port < 1 || c.Port > 65535 {
 		return errors.New("port must be between 1 and 65535")
 	}
@@ -133,7 +181,7 @@ func (c *Config) normalize() error {
 		return errors.New("token_env is required")
 	}
 	c.Token = os.Getenv(c.TokenEnv)
-	if len(c.Token) < 32 {
+	if requireToken && len(c.Token) < 32 {
 		return fmt.Errorf("environment variable %s must contain a token of at least 32 characters", c.TokenEnv)
 	}
 	if c.AuditLog == "" {
@@ -148,6 +196,14 @@ func (c *Config) normalize() error {
 	}
 	if c.MaxResponseBytes < 1024 || c.MaxResponseBytes > 4<<20 {
 		return errors.New("max_response_bytes must be between 1024 and 4194304")
+	}
+	if c.MaxWriteBytes < 1 || c.MaxWriteBytes > 64<<20 {
+		return errors.New("max_write_bytes must be between 1 and 67108864")
+	}
+	if !c.WritePermissions.Enabled {
+		c.WritePermissions.CreateFiles = false
+		c.WritePermissions.OverwriteFiles = false
+		c.WritePermissions.CreateDirectories = false
 	}
 	if c.MaxSearchFiles < 1 || c.MaxSearchResults < 1 || c.MaxConcurrency < 1 || c.RequestsPerMinute < 1 {
 		return errors.New("search, concurrency, and rate limits must be positive")
@@ -172,4 +228,9 @@ func (c *Config) normalize() error {
 
 func (c Config) Address() string {
 	return net.JoinHostPort(c.Listen, strconv.Itoa(c.Port))
+}
+
+func (c Config) HasWriteTools() bool {
+	w := c.WritePermissions
+	return w.Enabled && (w.CreateFiles || w.OverwriteFiles || w.CreateDirectories)
 }

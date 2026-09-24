@@ -1,10 +1,13 @@
 {
   "root": "./example-data",
   "listen": "127.0.0.1",
-  "port": 8765,
+  "port": 47381,
   "token_env": "SAFE_LOCAL_FILES_TOKEN",
   "audit_log": "./data/audit.jsonl",
   "allow_remote": false,
+  "allow_remote_write": false,
+  "tls_cert_file": "",
+  "tls_key_file": "",
   "follow_symlinks": false,
   "deny_globs": [
     ".git",
@@ -44,5 +47,12 @@
   "search_timeout_ms": 2000,
   "max_concurrency": 4,
   "requests_per_minute": 60,
-  "sensitive_content_action": "deny"
+  "sensitive_content_action": "deny",
+  "max_write_bytes": 1048576,
+  "write_permissions": {
+    "enabled": false,
+    "create_files": false,
+    "overwrite_files": false,
+    "create_directories": false
+  }
 }

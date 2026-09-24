@@ -87,6 +87,20 @@ type FetchOutput struct {
 	Truncated bool   `json:"truncated"`
 }
 
+type WriteInput struct {
+	Path    string `json:"path" jsonschema:"relative file path under the configured root"`
+	Content string `json:"content" jsonschema:"UTF-8 text to write, subject to policy and size limits"`
+	Mode    string `json:"mode" jsonschema:"create or overwrite; must be specified explicitly"`
+}
+
+type WriteOutput struct {
+	Entry safefs.Entry `json:"entry"`
+}
+
+type CreateDirectoryInput struct {
+	Path string `json:"path" jsonschema:"relative path of one new directory; parent must exist"`
+}
+
 func New(cfg config.Config) (*Service, error) {
 	fs, err := safefs.New(cfg)
 	if err != nil {
@@ -103,10 +117,16 @@ func New(cfg config.Config) (*Service, error) {
 		sem:     make(chan struct{}, cfg.MaxConcurrency),
 		limiter: newRateLimiter(cfg.RequestsPerMinute),
 	}
+	instructions := "Access to one configured local directory. Paths are relative to the root. Secret-like files and content may be denied or redacted. Use search before fetch when locating documents."
+	if cfg.HasWriteTools() {
+		instructions += " Write tools are restricted by independent configuration flags. Confirm the intended path and content before calling a write tool."
+	} else {
+		instructions += " This instance is read-only; do not claim write access."
+	}
 	s.server = mcp.NewServer(
-		&mcp.Implementation{Name: "safe-local-files", Version: "v0.1.0"},
+		&mcp.Implementation{Name: "safe-local-files", Version: "v0.2.0"},
 		&mcp.ServerOptions{
-			Instructions: "Read-only access to one configured local directory. Never claim write access. Paths are relative to the root. Secret-like files and content may be denied or redacted. Use search before fetch when locating documents.",
+			Instructions: instructions,
 			Capabilities: &mcp.ServerCapabilities{},
 		},
 	)
@@ -146,6 +166,53 @@ func (s *Service) registerTools() {
 		Description: "Return metadata for one allowed file or directory below the configured root without reading its contents.",
 		Annotations: annotations,
 	}, s.stat)
+
+	if s.cfg.HasWriteTools() {
+		writeAnnotations := &mcp.ToolAnnotations{ReadOnlyHint: false, IdempotentHint: false, OpenWorldHint: boolPtr(false), DestructiveHint: boolPtr(true)}
+		if s.cfg.WritePermissions.CreateFiles || s.cfg.WritePermissions.OverwriteFiles {
+			mcp.AddTool(s.server, &mcp.Tool{
+				Name: "write_file", Title: "Write local text file",
+				Description: "Create or overwrite one allowed UTF-8 text file inside the configured root. Requires an explicitly enabled operation and mode; content is never logged.",
+				Annotations: writeAnnotations,
+			}, s.write)
+		}
+		if s.cfg.WritePermissions.CreateDirectories {
+			mcp.AddTool(s.server, &mcp.Tool{
+				Name: "create_directory", Title: "Create local directory",
+				Description: "Create one directory under an existing parent inside the configured root. Requires explicit configuration.",
+				Annotations: writeAnnotations,
+			}, s.createDirectory)
+		}
+	}
+}
+
+func (s *Service) write(_ context.Context, _ *mcp.CallToolRequest, in WriteInput) (*mcp.CallToolResult, WriteOutput, error) {
+	started := time.Now()
+	var entry safefs.Entry
+	var err error
+	modeForAudit := in.Mode
+	switch in.Mode {
+	case "create":
+		entry, err = s.fs.WriteFile(in.Path, in.Content, false)
+	case "overwrite":
+		entry, err = s.fs.WriteFile(in.Path, in.Content, true)
+	default:
+		modeForAudit = "invalid"
+		err = fmt.Errorf("mode must be create or overwrite")
+	}
+	bytesWritten := 0
+	if err == nil {
+		bytesWritten = len(in.Content)
+	}
+	s.recordWithDetail("write_file", in.Path, 0, bytesWritten, started, err, "mode="+modeForAudit)
+	return nil, WriteOutput{Entry: entry}, err
+}
+
+func (s *Service) createDirectory(_ context.Context, _ *mcp.CallToolRequest, in CreateDirectoryInput) (*mcp.CallToolResult, WriteOutput, error) {
+	started := time.Now()
+	entry, err := s.fs.CreateDirectory(in.Path)
+	s.record("create_directory", in.Path, 0, 0, started, err)
+	return nil, WriteOutput{Entry: entry}, err
 }
 
 func (s *Service) list(_ context.Context, _ *mcp.CallToolRequest, in ListInput) (*mcp.CallToolResult, ListOutput, error) {
@@ -196,7 +263,11 @@ func (s *Service) Handler() http.Handler {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
-		_, _ = w.Write([]byte(`{"status":"ok","mode":"read-only"}`))
+		mode := "read-only"
+		if s.cfg.HasWriteTools() {
+			mode = "read-write"
+		}
+		_, _ = fmt.Fprintf(w, `{"status":"ok","mode":%q}`, mode)
 	})
 	mux.Handle("/mcp", s.guard(mcpHandler))
 	return securityHeaders(mux)

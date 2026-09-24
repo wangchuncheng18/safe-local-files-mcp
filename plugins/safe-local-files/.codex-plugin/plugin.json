@@ -1,15 +1,15 @@
 {
   "name": "safe-local-files",
-  "version": "0.1.1+codex.20260924042428",
-  "description": "Audited, least-privilege, read-only access to one local directory through MCP.",
+  "version": "0.2.0+codex.20260924044642",
+  "description": "Audited access to one local directory through MCP; read-only by default with optional bounded writes.",
   "author": {
     "name": "Safe Local Files Contributors"
   },
   "skills": "./skills/",
   "interface": {
     "displayName": "Safe Local Files",
-    "shortDescription": "Read and search one approved local folder.",
-    "longDescription": "A local-only MCP plugin for bounded, audited, read-only file listing, search, metadata, and text retrieval. It enforces a configured root, bearer authentication, deny rules, secret detection, rate limits, and response limits.",
+    "shortDescription": "Read and search one approved local folder; optionally write text.",
+    "longDescription": "A local MCP plugin for bounded, audited file listing, search, metadata, and text retrieval. The owner may separately enable text creation, overwrite, and directory creation. It enforces a configured root, deny rules, secret detection, and resource limits.",
     "developerName": "Safe Local Files Contributors",
     "category": "Productivity",
     "capabilities": [
@@ -21,6 +21,5 @@
       "Read a file from my approved local folder.",
       "List the top level of my approved local folder."
     ]
-  },
-  "mcpServers": "./.mcp.json"
+  }
 }

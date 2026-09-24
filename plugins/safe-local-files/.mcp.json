@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "safe_local_files": {
-      "type": "http",
-      "url": "http://127.0.0.1:8765/mcp",
-      "bearer_token_env_var": "SAFE_LOCAL_FILES_TOKEN"
-    }
-  }
-}

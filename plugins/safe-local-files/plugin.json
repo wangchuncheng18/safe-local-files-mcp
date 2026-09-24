@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "safe-local-files",
-  "version": "0.1.1",
-  "description": "Audited, least-privilege, read-only access to one local directory through MCP.",
+  "version": "0.2.0",
+  "description": "Audited access to one local directory through MCP; read-only by default with optional bounded writes.",
   "author": {
     "name": "Safe Local Files Contributors"
   },

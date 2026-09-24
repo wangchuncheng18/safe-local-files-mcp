@@ -28,7 +28,8 @@ if (-not (Test-Path -LiteralPath $ConfigPath)) {
 
 $runtimeConfig = Get-Content -LiteralPath $ConfigPath -Raw | ConvertFrom-Json
 $healthHost = if ($runtimeConfig.listen -in @("0.0.0.0", "::")) { "127.0.0.1" } else { $runtimeConfig.listen }
-$healthUri = "http://$healthHost`:$($runtimeConfig.port)/healthz"
+$healthScheme = if ($runtimeConfig.tls_cert_file) { "https" } else { "http" }
+$healthUri = "$healthScheme`://$healthHost`:$($runtimeConfig.port)/healthz"
 
 $token = [Environment]::GetEnvironmentVariable("SAFE_LOCAL_FILES_TOKEN", "User")
 if (-not $token -and (Test-Path -LiteralPath $tokenPath)) {
@@ -58,7 +59,7 @@ $process = Start-Process -FilePath $BinaryPath -ArgumentList @("serve", "--confi
 for ($i = 0; $i -lt 20; $i++) {
     Start-Sleep -Milliseconds 250
     try {
-        $health = Invoke-RestMethod -Uri $healthUri -TimeoutSec 2 -NoProxy
+        $health = Invoke-RestMethod -Uri $healthUri -TimeoutSec 2 -NoProxy -SkipCertificateCheck
         if ($health.status -eq "ok") {
             Write-Output "Safe Local Files started (PID $($process.Id)). Config: $ConfigPath"
             Write-Output "Restart Codex/ChatGPT once after first setup so it receives SAFE_LOCAL_FILES_TOKEN."

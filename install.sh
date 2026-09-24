@@ -8,4 +8,8 @@ chmod +x "$PLUGIN_ROOT"/scripts/*.sh
 codex plugin marketplace add "$REPO_ROOT"
 codex plugin add safe-local-files@personal
 "$PLUGIN_ROOT/scripts/start.sh"
-echo "Installed Safe Local Files. Restart the ChatGPT desktop app and use a new task."
+"$PLUGIN_ROOT/scripts/stop.sh"
+DATA_DIR=${XDG_CONFIG_HOME:-"$HOME/.config"}/safe-local-files
+codex mcp remove safe_local_files >/dev/null 2>&1 || true
+codex mcp add safe_local_files -- "$PLUGIN_ROOT/bin/safe-local-files" stdio --config "$DATA_DIR/config.json"
+echo "Installed Safe Local Files with on-demand stdio MCP. Start a new task."
