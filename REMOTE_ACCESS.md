@@ -1,5 +1,17 @@
 # 跨机器访问设计
 
+本项目采取“每人或每台数据机器部署一个实例”的模式。实例的 `root` 是该机器上的绝对路径。用户选择 MCP 连接地址时选择了实例，而非在 MCP 工具参数中传入主机 IP。这样每个实例的路径限制、审计日志和密钥独立。
+
+## GPT 快速聊天的两条链路
+
+**私有隧道**：GPT 快速聊天 → OpenAI 隧道端点 → 数据机器上的 `tunnel-client` → 同机 `stdio` MCP（或私有 HTTP）→ 授权目录。客户端只向 OpenAI 发起出站 HTTPS 请求，不需要公网域名或入站端口。`tunnel-client` 必须保持运行，且需 Platform 的 `tunnel_id`、运行密钥与 ChatGPT 开发者模式权限。远程服务器也可以运行同一客户端，读取它自己的目录。参见 [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)。
+
+**长期 HTTPS 地址**：GPT 快速聊天 → `https://files.example.com/mcp` → HTTPS 网关 → 同机 `127.0.0.1:47381/mcp` → 授权目录。DNS 名称指向入口；仅修改客户端 `hosts` 文件或使用不可从 OpenAI 到达的私有 IP 无效。不同朋友各自部署服务，并注册各自的 HTTPS 地址。服务器可在局域网、家用电脑或云主机上，但入口必须可从 ChatGPT 到达，且不能把未经鉴权的 MCP 原始端口直接暴露出去。正式公开分发还需稳定 HTTPS 端点与插件审查。参见 [插件部署要求](https://developers.openai.com/plugins/build/mcp-server)。
+
+ChatGPT 不会提供用户自定义的静态 API key。公网网关应验证 OpenAI 管理的客户端 mTLS 证书，终端用户应走 OAuth 2.1；若用现有静态 Token 连接 MCP 进程，只能将其保存在网关私有配置里并由网关注入，不得放在插件清单或 URL 中。多用户共享服务器还须按身份隔离目录，本项目当前只实现单实例单根目录，因此推荐每人部署自己的实例。参见 [ChatGPT 认证指南](https://developers.openai.com/plugins/build/auth)。
+
+当网关与 MCP 进程位于同一机器时，保持 `listen: "127.0.0.1"`、`allow_remote: false`，并设置 `behind_proxy: true`。此模式下写工具还须 `allow_remote_write: true` 与相应 `write_permissions` 同时开启。网关必须完成 TLS、客户端和用户认证、请求体限制及速率限制，并且只能转发 `/mcp` 到本机端口。应用本身的 `/healthz` 不应公开。部署完成先检查未认证请求被拒绝，再从 ChatGPT 注册连接并检查发现的工具。
+
 本机使用时选 `stdio`。如果客户端和数据不在同一台电脑，`127.0.0.1` 在客户端看来指的是客户端自己，不能访问数据机器。跨机器必须建立一条从客户端到数据机器的网络路径。
 
 推荐顺序：在两台机器之间建立私有 VPN（如 WireGuard/Tailscale 等），只对 VPN 网卡地址提供 HTTPS MCP 服务，再在客户端配置该地址及独立的 Bearer Token。只给可信设备加入 VPN，限制主机防火墙入站来源。HTTP 服务不应绑定 `0.0.0.0` 后直接做公网端口映射。

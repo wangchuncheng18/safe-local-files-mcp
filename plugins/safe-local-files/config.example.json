@@ -5,6 +5,7 @@
   "token_env": "SAFE_LOCAL_FILES_TOKEN",
   "audit_log": "./data/audit.jsonl",
   "allow_remote": false,
+  "behind_proxy": false,
   "allow_remote_write": false,
   "tls_cert_file": "",
   "tls_key_file": "",

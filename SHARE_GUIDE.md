@@ -26,8 +26,8 @@ Windows 在仓库根目录运行 `.\install.ps1`；macOS/Linux 运行 `./install
 
 ## 常见问题
 
-**安装了插件但快速对话无反应？** 先新建对话，再运行 `codex mcp get safe_local_files`，确认显示 `transport: stdio`。检查配置中的目录是否存在、可执行文件是否在原位置。仅看到插件技能名称并不能证明 MCP 工具已经连接。
+**安装了插件但 GPT 快速聊天无反应？** `codex mcp get safe_local_files` 只检查 Codex 本机任务的连接，不代表 GPT 快速聊天也能调用它。快速聊天须另外注册可达的 Secure MCP Tunnel 或 HTTPS MCP 连接，并在聊天中启用该连接。仅看到插件技能名称并不能证明 MCP 工具已经连接。
 
 **为什么朋友不能访问我的文件？** 每台电脑的 `root` 都是本地私有配置，默认没有跨机器连接。仓库不包含任何人的私有配置或文件。
 
-**能从另一台电脑访问吗？** 可以，但需要主动建立 VPN 或 TLS 连接，并显式开启远程访问。请先阅读 [REMOTE_ACCESS.md](REMOTE_ACCESS.md)。不建议直接做路由器公网端口映射。
+**能从另一台电脑或 GPT 快速聊天访问吗？** 可以。每位朋友在自己的机器部署服务，并为该机器选择私有隧道或 HTTPS 地址；连接地址决定访问的是哪台机器的授权目录。仅改 `hosts` 文件不能让云端 GPT 快速聊天进入内网。请先阅读 [REMOTE_ACCESS.md](REMOTE_ACCESS.md)。不建议直接做路由器公网端口映射。

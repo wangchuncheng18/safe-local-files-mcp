@@ -64,6 +64,25 @@ func TestRemoteRequiresTLSAndSeparateWriteOptIn(t *testing.T) {
 	}
 }
 
+func TestLoopbackProxyRequiresSeparateWriteOptIn(t *testing.T) {
+	t.Setenv("SAFE_LOCAL_FILES_TOKEN", "abcdefghijklmnopqrstuvwxyz0123456789")
+	root := t.TempDir()
+	configPath := filepath.Join(t.TempDir(), "config.json")
+	base := `{"root":` + quote(root) + `,"audit_log":` + quote(filepath.Join(t.TempDir(), "audit.jsonl")) + `,"behind_proxy":true,"write_permissions":{"enabled":true,"create_files":true}`
+	if err := os.WriteFile(configPath, []byte(base+`}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(configPath); err == nil {
+		t.Fatal("proxied write accepted without separate opt-in")
+	}
+	if err := os.WriteFile(configPath, []byte(base+`,"allow_remote_write":true}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(configPath); err != nil {
+		t.Fatalf("proxied write opt-in rejected: %v", err)
+	}
+}
+
 func quote(value string) string {
 	result, _ := json.Marshal(value)
 	return string(result)

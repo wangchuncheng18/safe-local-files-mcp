@@ -19,6 +19,7 @@ type Config struct {
 	TokenEnv               string           `json:"token_env"`
 	AuditLog               string           `json:"audit_log"`
 	AllowRemote            bool             `json:"allow_remote"`
+	BehindProxy            bool             `json:"behind_proxy"`
 	AllowRemoteWrite       bool             `json:"allow_remote_write"`
 	TLSCertFile            string           `json:"tls_cert_file"`
 	TLSKeyFile             string           `json:"tls_key_file"`
@@ -153,9 +154,12 @@ func (c *Config) normalize(requireToken bool) error {
 		if c.TLSCertFile == "" || c.TLSKeyFile == "" {
 			return errors.New("non-loopback listen address requires tls_cert_file and tls_key_file")
 		}
-		if c.HasWriteTools() && !c.AllowRemoteWrite {
-			return errors.New("non-loopback write access requires allow_remote_write=true")
-		}
+	}
+	if requireToken && c.BehindProxy && !ip.IsLoopback() {
+		return errors.New("behind_proxy requires a loopback listen address")
+	}
+	if requireToken && c.HasWriteTools() && (!ip.IsLoopback() || c.BehindProxy) && !c.AllowRemoteWrite {
+		return errors.New("remote or proxied write access requires allow_remote_write=true")
 	}
 	if (c.TLSCertFile == "") != (c.TLSKeyFile == "") {
 		return errors.New("tls_cert_file and tls_key_file must be configured together")

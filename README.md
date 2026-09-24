@@ -1,6 +1,6 @@
 # Safe Local Files MCP
 
-一个供本机 Codex 使用的文件 MCP 工具。每位使用者只授权自己电脑上的一个目录；默认只读，不扫描后台文件，不把 Token、配置或文件内容放进 GitHub 仓库。Windows、macOS 和 Linux 均可从源码构建，Release 提供对应平台的可执行文件。
+一个用于本机和远程文件访问的 MCP 服务。每位使用者在自己的 Windows、macOS 或 Linux 机器上部署服务，并只授权该机器的一个目录。默认只读，不扫描后台文件，不把 Token、配置或文件内容放进 GitHub 仓库。
 
 > 本项目的 GitHub 仓库只分发程序。朋友安装后应选择**自己电脑**上的目录。仓库中没有、也不需要作者电脑的私有文件。
 
@@ -30,7 +30,7 @@ cd safe-local-files-mcp
 ./install.sh
 ```
 
-安装器会编译程序、安装个人插件、建立私有配置和 Token，并把 `safe_local_files` 注册为 Codex 的 `stdio` MCP。Codex 在需要时自动启动服务，因此本机快速对话不依赖常驻端口。安装完成后，**先把配置里的 `root` 改成你自己的目录，再新建一个 Codex 对话**。
+安装器会编译程序、安装个人插件、建立私有配置和 Token，并把 `safe_local_files` 注册为 Codex 的 `stdio` MCP。Codex 在需要时自动启动服务，因此本机 Codex 任务不依赖常驻端口。安装完成后，**先把配置里的 `root` 改成你自己的目录，再新建一个 Codex 任务**。这一步不会自动给云端 GPT 快速聊天注册工具；其接入方式见下文。
 
 私有配置位置：
 
@@ -73,6 +73,7 @@ cd safe-local-files-mcp
 | `max_write_bytes` | `1048576` | 单次写入最多字节数 |
 | `write_permissions` | 全部关闭 | 分别控制创建、覆盖和建目录 |
 | `listen` / `allow_remote` | `127.0.0.1` / `false` | 仅可选 HTTP 使用；远程需显式打开 |
+| `behind_proxy` | `false` | HTTPS 代理转发到本机回环地址时设为 `true`；写入还需独立开关 |
 | `tls_cert_file` / `tls_key_file` | 空 | 非回环监听时必填 |
 | `allow_remote_write` | `false` | 非回环监听的额外写入开关 |
 
@@ -94,11 +95,24 @@ HTTP 默认只监听 `127.0.0.1:47381`。可在私有 `config.json` 中改 `port
 
 轮换后旧 Token 失效；使用 HTTP 的客户端需要重新取得新值。不要把 Token 发给别人、写进仓库或贴进对话。朋友的安装器会为朋友生成独立 Token。
 
+## 选择 MCP 地址与接入方式
+
+**目录由服务端决定，地址由客户端选择。** 例如 `https://files.alice.example/mcp` 连接 Alice 机器上的服务与其授权目录，`https://files.bob.example/mcp` 连接 Bob 的机器与目录。MCP 请求中的相对路径不能切换主机或逃出该服务的 `root`。每人各自保存配置、Token 和审计日志。不要让用户在工具参数里输入任意 IP，让同一个服务充当开放式文件代理。
+
+| 客户端与网络 | 推荐链路 |
+| --- | --- |
+| 本机 Codex 任务 | `stdio`，无需网络端口 |
+| GPT 快速聊天访问私有机器 | [Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)：在数据机器运行 `tunnel-client`，连接本机 `stdio` MCP 或私有 HTTP MCP |
+| GPT 快速聊天或其他云端客户端访问长期服务 | 稳定域名的公网 HTTPS 入口 → 受控网关/反向代理 → 同机 `127.0.0.1:47381/mcp`；面向 ChatGPT 的身份验证须符合其 MCP OAuth/mTLS 要求 |
+| 内网或 VPN 内的 Codex 客户端 | 使用 VPN 地址的 HTTPS MCP；客户端保存自己的凭据 |
+
+`127.0.0.1` 永远指当前发起连接的机器。内网 DNS、`hosts` 文件或 VPN IP 只对能进入该网络的客户端有效，不能让云端 GPT 快速聊天直接访问本机。完整链路、部署边界和 HTTPS 网关要求见 [REMOTE_ACCESS.md](REMOTE_ACCESS.md)。
+
 ## 可选的 HTTP 服务和跨机器访问
 
 需要其他本地客户端时运行 `scripts/start.ps1` 或 `scripts/start.sh`，停止用对应的 `stop` 脚本。HTTP MCP 路径为 `/mcp`，健康检查路径为 `/healthz`。跨机器访问须显式设置 `allow_remote: true`，监听指定 IP，提供 TLS 证书和私钥；如果同时开启写入，还须设置 `allow_remote_write: true`。建议通过私有 VPN 连接，并把监听地址限制为 VPN 网卡 IP。不要把端口直接映射到公网。部署方案和边界见 [REMOTE_ACCESS.md](REMOTE_ACCESS.md)。
 
-云端 ChatGPT 网页会话无法直接访问你电脑的 `127.0.0.1`。本项目的本机安装目标是运行在使用者电脑上的 Codex/ChatGPT 桌面环境；跨机器场景需要由使用者自行建立可信网络连接。
+GPT 快速聊天即使在桌面 App 中打开，MCP 连接仍须在 ChatGPT 一侧注册。仅安装本地插件或在 `hosts` 文件中添加名称不会使快速聊天获得本机 MCP 工具。ChatGPT 不能呈现自定义静态 API key；长期 HTTPS 接入应使用成熟的 OAuth 2.1 身份提供商，并可在网关校验 OpenAI 的客户端 mTLS 证书。现有静态 Bearer Token 适合私有 Codex 客户端和受控网关到服务的最后一跳，不能当作多用户公网认证。[官方认证要求](https://developers.openai.com/plugins/build/auth)
 
 ## 验证和故障排查
 
