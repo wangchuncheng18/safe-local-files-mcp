@@ -4,7 +4,7 @@
 
 > 本项目的 GitHub 仓库只分发程序。朋友安装后应选择**自己电脑**上的目录。仓库中没有、也不需要作者电脑的私有文件。
 
-**想让 GPT 快速聊天读取自己的机器？** 无域名时按 [SECURE_TUNNEL.md](SECURE_TUNNEL.md) 建立私有连接；其中有可以交给朋友的本地 Codex 的完整任务文本。若以后要稳定公网 HTTPS 地址，再按 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md) 部署 Cloudflare Tunnel + Access。每个人使用自己的授权目录和 ChatGPT MCP 连接。目前目标是只读，写入留待以后单独处理。
+**想让 GPT 快速聊天读取自己的机器？** 先看图文版 [快速聊天本地文件只读接入指南](docs/快速聊天本地文件只读接入指南.md)，也可下载同目录的 [Word 版](docs/快速聊天本地文件只读接入指南.docx) 分享给同事。无域名时按 [SECURE_TUNNEL.md](SECURE_TUNNEL.md) 建立私有连接；若以后要稳定公网 HTTPS 地址，再按 [QUICK_CHAT_SETUP.md](QUICK_CHAT_SETUP.md) 部署 Cloudflare Tunnel + Access。每个人使用自己的授权目录和 ChatGPT MCP 连接。目前目标是只读，写入留待以后单独处理。
 
 ## 能做什么
 
